@@ -1,0 +1,96 @@
+# Development environment. Copy .env.example to .env before starting.
+# Only services that can run without application code are enabled.
+
+services:
+  db-users:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${USERS_DB_USER}
+      POSTGRES_PASSWORD: ${USERS_DB_PASSWORD}
+      POSTGRES_DB: ${USERS_DB_NAME}
+    ports:
+      - "${USERS_DB_PORT}:5432"
+    volumes:
+      - users-data:/var/lib/postgresql/data
+      # Init scripts (*.sql, *.sh) are added later in database/users/init
+      - ./database/users/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-content:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${CONTENT_DB_USER}
+      POSTGRES_PASSWORD: ${CONTENT_DB_PASSWORD}
+      POSTGRES_DB: ${CONTENT_DB_NAME}
+    ports:
+      - "${CONTENT_DB_PORT}:5432"
+    volumes:
+      - content-data:/var/lib/postgresql/data
+      - ./database/content/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-activity:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${ACTIVITY_DB_USER}
+      POSTGRES_PASSWORD: ${ACTIVITY_DB_PASSWORD}
+      POSTGRES_DB: ${ACTIVITY_DB_NAME}
+    ports:
+      - "${ACTIVITY_DB_PORT}:5432"
+    volumes:
+      - activity-data:/var/lib/postgresql/data
+      - ./database/activity/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Application services ---
+  # Behind the "app" profile: not started by a plain `docker compose up`.
+  # Start them with `docker compose --profile app up -d` once the code exists.
+  backend:
+    profiles: ["app"]
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${BACKEND_PORT}:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db-users:
+        condition: service_healthy
+      db-content:
+        condition: service_healthy
+      db-activity:
+        condition: service_healthy
+
+  frontend:
+    profiles: ["app"]
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT}:4200"
+    volumes:
+      - ./frontend:/app
+      # keep container-installed dependencies out of the host bind mount
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  users-data:
+  content-data:
+  activity-data:
