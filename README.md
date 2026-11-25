@@ -85,3 +85,7 @@ Both folders already contain a development `Dockerfile` and a Compose service (p
 Then run `docker compose --profile app up -d --build`. Use `--profile app` with `stop`/`down` too to include these services.
 
 No Node.js installed? See `frontend/README.md` for creating the Angular app through Docker.
+
+## Declaration of AI Use
+
+Google Gemini was used to assist in generating and troubleshooting boilerplate code for the Angular frontend (login/registration and video catalog components, routing, and auth services) and FastAPI backend endpoints (Argon2id/JWT authentication and catalog routers). All architectural decisions, integration, and final implementations were reviewed and adapted by the team.
