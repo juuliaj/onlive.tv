@@ -77,21 +77,54 @@ services:
 
   db-activity:
     image: postgres:16-alpine
-    restart: unless-stopped
+    container_name: db-activity
     environment:
-      POSTGRES_USER: ${ACTIVITY_DB_USER}
-      POSTGRES_PASSWORD: ${ACTIVITY_DB_PASSWORD}
-      POSTGRES_DB: ${ACTIVITY_DB_NAME}
+      POSTGRES_DB: activity_db
+      POSTGRES_USER: activity_user
+      POSTGRES_PASSWORD: activity_password
+    command: >
+      postgres
+      -c wal_level=replica
+      -c max_wal_senders=10
+      -c max_replication_slots=10
+      -c hot_standby=on
     ports:
-      - "${ACTIVITY_DB_PORT}:5432"
+      - "5436:5432"
     volumes:
       - activity-data:/var/lib/postgresql/data
       - ./database/activity/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U activity_user -d activity_db"]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  db-activity-replica:
+    image: postgres:16-alpine
+    container_name: db-activity-replica
+    depends_on:
+      db-activity:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: activity_password
+    entrypoint:
+      - bash
+      - -c
+      - |
+        set -e
+        if [ ! -s /var/lib/postgresql/data/PG_VERSION ]; then
+          rm -rf /var/lib/postgresql/data/*
+          until pg_basebackup -h db-activity -p 5432 -U activity_user -D /var/lib/postgresql/data -Fp -Xs -P -R -S activity_replica_slot; do
+            echo "Waiting for db-activity primary..."
+            sleep 2
+          done
+          chmod 0700 /var/lib/postgresql/data
+        fi
+        exec docker-entrypoint.sh postgres -c hot_standby=on
+    ports:
+      - "5437:5432"
+    volumes:
+      - activity-replica-data:/var/lib/postgresql/data
 
   # --- Application services ---
   # Behind the "app" profile: not started by a plain `docker compose up`.
@@ -131,3 +164,4 @@ volumes:
   content-data:
   content-replica-data:
   activity-data:
+  activity-replica-data:
