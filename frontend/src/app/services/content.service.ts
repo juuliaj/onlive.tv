@@ -31,6 +31,6 @@ export class ContentService {
    * @returns Array of genre strings prefixed with 'All'.
    */
   getAvailableTypes(): string[] {
-    return ['All', 'Action', 'Documentary', 'Sci-Fi', 'Thriller', 'Education'];
+  return ['All', 'video', 'live_vod', 'movie', 'series'];
   }
 }

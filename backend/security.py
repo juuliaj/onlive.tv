@@ -4,6 +4,7 @@ from typing import Any
 
 import jwt
 from argon2 import PasswordHasher
+from argon2.exceptions import Argon2Error
 from argon2.exceptions import VerifyMismatchError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -26,14 +27,18 @@ def hash_password(plain_password: str) -> str:
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
-    """
-    Verifies a plain-text password against a stored Argon2id hash.
-    Input: plain_password (str), password_hash (str)
-    Output: True if valid, False otherwise (bool)
+    """Verifies a plaintext password against a stored Argon2id hash.
+
+    Args:
+        plain_password: Raw password supplied by the user.
+        password_hash: Stored Argon2id hash from db-users.
+
+    Returns:
+        bool: True if valid, False on mismatch or unrecognized hash format.
     """
     try:
         return _ph.verify(password_hash, plain_password)
-    except VerifyMismatchError:
+    except Argon2Error:
         return False
 
 

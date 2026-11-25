@@ -26,7 +26,7 @@ import { AuthService } from './services/auth.service';
             >
               Video Catalog
             </a>
-            @if (authService.currentUser()?.role === 'Creator' || authService.currentUser()?.role === 'Admin') {
+            @if (authService.currentUser()?.role === 'uploader' || authService.currentUser()?.role === 'admin') {
               <button
                type="button"
                 disabled
@@ -35,7 +35,7 @@ import { AuthService } from './services/auth.service';
                Upload Portal (Soon)
              </button>
           }
-            @if (authService.currentUser()?.role === 'Admin') {
+            @if (authService.currentUser()?.role === 'admin') {
               <button
                 type="button"
                 disabled

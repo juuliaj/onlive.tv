@@ -1,4 +1,4 @@
-export type UserRole = 'Viewer' | 'Creator' | 'Admin';
+export type UserRole = 'viewer' | 'uploader' | 'admin';
 
 export interface User {
   userId: string; // UUID

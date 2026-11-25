@@ -53,7 +53,7 @@ services:
       POSTGRES_USER: ${CONTENT_DB_USER}
       POSTGRES_DB: ${CONTENT_DB_NAME}
     ports:
-      - "${CONTENT_REPLICA_DB_PORT:-5433}:5432"
+      - "${CONTENT_REPLICA_DB_PORT:-5435}:5432"
     volumes:
       - content-replica-data:/var/lib/postgresql/data
     depends_on:
@@ -144,6 +144,8 @@ services:
       db-content:
         condition: service_healthy
       db-activity:
+        condition: service_healthy
+      db-content-replica:
         condition: service_healthy
 
   frontend:

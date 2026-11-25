@@ -50,7 +50,7 @@ export class AuthService {
     name: string,
     email: string,
     password: string,
-    role: UserRole = 'Viewer'
+    role: UserRole = 'viewer'
   ): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${API_URL}/auth/register`, { name, email, password, role })

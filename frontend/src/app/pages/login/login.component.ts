@@ -73,13 +73,10 @@ import { AuthService } from '../../services/auth.service';
               <label for="role" class="block text-sm font-medium text-slate-400 mb-1">
                 Account Role
               </label>
-              <select
-                id="role"
-                formControlName="role"
-                class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="Viewer">Viewer (Customer)</option>
-                <option value="Creator">Creator (Uploader)</option>
+              <select id="role" formControlName="role" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500">
+                <option value="viewer">Viewer (Customer)</option>
+                <option value="uploader">Uploader (Creator)</option>
+                <option value="admin">Admin</option>
               </select>
             </div>
           } @else {
@@ -154,7 +151,7 @@ export class LoginComponent {
     name: [''],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(4)]],
-    role: ['Viewer' as UserRole],
+    role: ['viewer' as UserRole],
     rememberMe: [true],
   });
 

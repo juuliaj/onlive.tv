@@ -1,51 +1,56 @@
-from typing import Literal, Optional
+"""Pydantic request and response models aligned with PostgreSQL schemas."""
+
+from typing import Literal
 from pydantic import BaseModel, EmailStr, Field
-
-UserRole = Literal["Viewer", "Creator", "Admin"]
-ContentStatus = Literal["Published", "Processing", "Archived"]
-
-
-class UserPublic(BaseModel):
-    """Public user representation (never exposes PasswordHash)."""
-    userId: str
-    name: str
-    email: EmailStr
-    role: UserRole
-    shard: str = "EU-East-01"
-
-
-class RegisterRequest(BaseModel):
-    """Payload for registering a new user account."""
-    name: str = Field(..., min_length=2, max_length=100)
-    email: EmailStr
-    password: str = Field(..., min_length=4, max_length=128)
-    role: Literal["Viewer", "Creator"] = "Viewer"
 
 
 class LoginRequest(BaseModel):
-    """Payload for authenticating an existing user."""
+    """Payload for POST /auth/login."""
+
     email: EmailStr
-    password: str
+    password: str = Field(min_length=4)
+
+
+class RegisterRequest(BaseModel):
+    """Payload for POST /auth/register."""
+
+    name: str = Field(min_length=2, max_length=120)
+    email: EmailStr
+    password: str = Field(min_length=4)
+    role: str = "viewer"
+
+
+class UserPublic(BaseModel):
+    """Public user profile returned to the frontend (never includes password_hash)."""
+
+    userId: str
+    name: str
+    email: str
+    role: str
 
 
 class AuthResponse(BaseModel):
-    """Response returned after successful login or registration."""
+    """Response payload containing a signed JWT and user profile."""
+
     accessToken: str
     tokenType: Literal["Bearer"] = "Bearer"
     user: UserPublic
 
 
 class ContentItem(BaseModel):
-    """Metadata for a video item in the Content Library."""
+    """Video catalog entry mapped from db-content."""
+
     contentId: str
     contentOwnerId: str
     title: str
-    description: str
+    description: str | None = None
     type: str
-    releaseDate: str
-    status: ContentStatus
+    releaseDate: str | None = None
+    status: str
     storageUrl: str
-    format: str
-    resolution: str
-    duration: str
-    thumbnailUrl: str
+    format: str | None = None
+    resolution: str | None = None
+    createdAt: str
+    averageRating: float | None = None
+    likeCount: int = 0
+    partition: str | None = None

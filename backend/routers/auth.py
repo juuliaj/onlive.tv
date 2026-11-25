@@ -1,84 +1,120 @@
-import uuid
+"""Authentication router backed by PostgreSQL db-users."""
+
+import psycopg
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from mock_db import MOCK_USERS
+from db import get_users_db
 from schemas import AuthResponse, LoginRequest, RegisterRequest, UserPublic
-from security import (
-    create_access_token,
-    get_current_user_claims,
-    hash_password,
-    verify_password,
-)
+from security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+# Maps frontend/legacy labels to the exact values enforced by db-users CHECK constraint.
+ROLE_MAP = {
+    "viewer": "viewer",
+    "uploader": "uploader",
+    "creator": "uploader",
+}
+
+
+@router.post("/login", response_model=AuthResponse)
+def login(
+    payload: LoginRequest,
+    conn: psycopg.Connection = Depends(get_users_db),
+) -> AuthResponse:
+    """Authenticates a user against db-users and issues a signed JWT.
+
+    Args:
+        payload: User email and plaintext password.
+        conn: Active PostgreSQL connection to db-users.
+
+    Returns:
+        AuthResponse: Bearer JWT and public user profile.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT user_id, name, email, password_hash, role
+            FROM users
+            WHERE LOWER(email) = LOWER(%s)
+            """,
+            (payload.email,),
+        )
+        row = cur.fetchone()
+
+    if not row or not verify_password(payload.password, row["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password.",
+        )
+
+    user = UserPublic(
+        userId=str(row["user_id"]),
+        name=row["name"],
+        email=row["email"],
+        role=row["role"],
+    )
+    token = create_access_token(
+        user_id=user.userId,
+        email=user.email,
+        name=user.name,
+        role=user.role,
+    )
+    return AuthResponse(accessToken=token, user=user)
+
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-def register_user(payload: RegisterRequest) -> AuthResponse:
+def register(
+    payload: RegisterRequest,
+    conn: psycopg.Connection = Depends(get_users_db),
+) -> AuthResponse:
+    """Registers a new user in db-users with an Argon2id password hash.
+
+    Args:
+        payload: Registration form data (name, email, password, role).
+        conn: Active PostgreSQL connection to db-users.
+
+    Returns:
+        AuthResponse: Bearer JWT and newly created user profile.
     """
-    Registers a new user, hashes their password with Argon2id, and returns a JWT.
-    Input: RegisterRequest (name, email, password, role)
-    Output: AuthResponse (accessToken, tokenType, user)
-    """
-    normalized_email = payload.email.lower()
-    if any(u["email"].lower() == normalized_email for u in MOCK_USERS):
+    normalized_role = ROLE_MAP.get(payload.role.strip().lower())
+    if not normalized_role:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid role. Choose 'viewer' or 'uploader'.",
+        )
+
+    password_hash = hash_password(payload.password)
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO users (name, email, password_hash, role)
+                VALUES (%s, %s, %s, %s)
+                RETURNING user_id, name, email, role
+                """,
+                (payload.name.strip(), payload.email.strip().lower(), password_hash, normalized_role),
+            )
+            row = cur.fetchone()
+        conn.commit()
+    except psycopg.errors.UniqueViolation:
+        conn.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="An account with this email already exists.",
         )
 
-    new_user = {
-        "userId": str(uuid.uuid4()),
-        "name": payload.name.strip(),
-        "email": normalized_email,
-        "passwordHash": hash_password(payload.password),
-        "role": payload.role,
-        "shard": "EU-East-01",
-    }
-    MOCK_USERS.append(new_user)
-
-    token = create_access_token(
-        user_id=new_user["userId"],
-        email=new_user["email"],
-        name=new_user["name"],
-        role=new_user["role"],
+    user = UserPublic(
+        userId=str(row["user_id"]),
+        name=row["name"],
+        email=row["email"],
+        role=row["role"],
     )
-    return AuthResponse(accessToken=token, user=UserPublic(**new_user))
-
-
-@router.post("/login", response_model=AuthResponse)
-def login_user(payload: LoginRequest) -> AuthResponse:
-    """
-    Verifies user credentials against the Argon2id hash and issues a JWT bearer token.
-    Input: LoginRequest (email, password)
-    Output: AuthResponse (accessToken, tokenType, user)
-    """
-    normalized_email = payload.email.lower()
-    user = next((u for u in MOCK_USERS if u["email"].lower() == normalized_email), None)
-
-    if not user or not verify_password(payload.password, user["passwordHash"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email address or password.",
-        )
-
     token = create_access_token(
-        user_id=user["userId"],
-        email=user["email"],
-        name=user["name"],
-        role=user["role"],
+        user_id=user.userId,
+        email=user.email,
+        name=user.name,
+        role=user.role,
     )
-    return AuthResponse(accessToken=token, user=UserPublic(**user))
-
-
-@router.get("/me", response_model=UserPublic)
-def get_me(claims: dict = Depends(get_current_user_claims)) -> UserPublic:
-    """
-    Returns the profile of the currently authenticated user based on their JWT claims.
-    Input: Valid Bearer JWT in Authorization header
-    Output: UserPublic
-    """
-    user = next((u for u in MOCK_USERS if u["userId"] == claims["sub"]), None)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    return UserPublic(**user)
+    return AuthResponse(accessToken=token, user=user)
