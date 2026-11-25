@@ -11,7 +11,3 @@ docker run --rm -v "$PWD/frontend":/app -w /app node:22-alpine npx @angular/cli 
 ```
 
 On Windows PowerShell `$PWD` works as above; in Command Prompt use `%cd%` instead. Pick the options you want when prompted, and keep the generated `package.json` and `package-lock.json` in `frontend/`.
-
-## Declaration of AI Use
-
-Google Gemini was used to assist in generating and troubleshooting boilerplate code for the Angular frontend (login/registration and video catalog components, routing, and auth services) and FastAPI backend endpoints (Argon2id/JWT authentication and catalog routers). All architectural decisions, integration, and final implementations were reviewed and adapted by the team.
