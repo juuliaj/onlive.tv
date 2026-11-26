@@ -23,14 +23,14 @@ git clone https://github.com/juuliaj/onlive.tv.git
 cd onlive.tv
 cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
 # edit .env and set passwords
-docker compose up -d
-docker compose ps
+docker-compose up -d
+docker-compose ps
 ```
 
 Currently only the three PostgreSQL databases start (empty). The `frontend` and `backend` services are defined in `docker-compose.yml` behind the `app` profile, so they are skipped until their code exists. Once it does:
 
 ```bash
-docker compose --profile app up -d --build
+docker-compose --profile app up -d --build
 ```
 
 ## Configuring `.env`
@@ -48,14 +48,14 @@ Changing database credentials after the first start has no effect on existing vo
 ## Stopping
 
 ```bash
-docker compose stop     # stop, keep containers
-docker compose down     # remove containers, keep data
+docker-compose stop     # stop, keep containers
+docker-compose down     # remove containers, keep data
 ```
 
 ## Removing containers and volumes
 
 ```bash
-docker compose down -v
+docker-compose down -v
 ```
 
 > **Warning:** `-v` deletes all persistent local database data. Do not use it unless you want a clean slate.
