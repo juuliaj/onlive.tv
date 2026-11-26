@@ -36,13 +36,13 @@ import { AuthService } from './services/auth.service';
              </button>
           }
             @if (authService.currentUser()?.role === 'admin') {
-              <button
-                type="button"
-                disabled
-                class="w-full flex items-center px-6 py-3 text-sm font-medium text-slate-600 cursor-not-allowed border-l-4 border-transparent"
+            <a
+              routerLink="/admin"
+              routerLinkActive="bg-slate-800 border-blue-600 text-white"
+              class="w-full flex items-center px-6 py-3 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition-colors border-l-4 border-transparent"
               >
-                Admin Dashboard (Soon)
-              </button>
+              Admin Dashboard
+            </a>
             }
           </nav>
 

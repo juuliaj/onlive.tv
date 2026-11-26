@@ -81,3 +81,15 @@ def get_current_user_claims(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token.",
         )
+
+
+def require_admin(
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+) -> dict[str, Any]:
+    """Restricts an endpoint to users with the admin role."""
+    if claims.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access is required.",
+        )
+    return claims

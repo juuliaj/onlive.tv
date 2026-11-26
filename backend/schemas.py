@@ -54,3 +54,42 @@ class ContentItem(BaseModel):
     averageRating: float | None = None
     likeCount: int = 0
     partition: str | None = None
+
+
+class DatabaseHealth(BaseModel):
+    name: str
+    status: Literal["healthy", "unavailable"]
+    checkedAt: str
+    error: str | None = None
+
+
+class UserMetrics(BaseModel):
+    total: int
+    admins: int
+    uploaders: int
+    viewers: int
+
+
+class ContentMetrics(BaseModel):
+    total: int
+    published: int
+    processing: int
+    drafts: int
+    archived: int
+    restricted: int
+
+
+class ActivityMetrics(BaseModel):
+    playbackEvents: int
+    activeViewers24h: int
+    watchlists: int
+    ratings: int
+    likes: int
+
+
+class AdminDashboard(BaseModel):
+    generatedAt: str
+    databases: list[DatabaseHealth]
+    users: UserMetrics | None
+    content: ContentMetrics | None
+    activity: ActivityMetrics | None

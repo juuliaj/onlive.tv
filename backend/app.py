@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth, content
+from routers import admin, auth, content
 
 app = FastAPI(
     title="Onlive.tv API",
@@ -19,6 +19,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(content.router)
+app.include_router(admin.router)
 
 
 @app.get("/")
